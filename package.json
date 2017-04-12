@@ -1,0 +1,36 @@
+{
+  "name": "typeout",
+  "version": "1.0.0",
+  "description": "Print out text one char by one char",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "files": [
+    "index.js"
+  ],
+  "repository": "unixzii/typeout",
+  "keywords": [
+    "log",
+    "term",
+    "terminal",
+    "animation",
+    "effect",
+    "fancy",
+    "print",
+    "console"
+  ],
+  "author": {
+    "name": "Cyandev",
+    "email": "unixzii@gmail.com",
+    "url": "www.icyandev.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/unixzii/typeout/issues"
+  },
+  "homepage": "https://github.com/unixzii/typeout#readme",
+  "devDependencies": {
+    "chalk": "^1.1.3"
+  }
+}
