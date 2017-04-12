@@ -5,7 +5,7 @@
 ## Install
 
 ```
-$ npm install --save typeout
+$ npm install --save typeout2
 ```
 
 ## Usage
