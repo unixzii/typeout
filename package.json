@@ -1,6 +1,6 @@
 {
   "name": "typeout2",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Print out text one char by one char",
   "main": "index.js",
   "scripts": {
