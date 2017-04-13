@@ -1,88 +1,100 @@
-function sleep (ms) {
-  let timerId;
-  let _resolve;
+const deferred = require('./deferred');
 
-  const promise = new Promise(resolve => {
-    let resolved = false;
+function sleep(ms) {
+	let timerId;
+	let _resolve;
 
-    _resolve = () => {
-      if (!resolved) {
-        resolved = true;
-        resolve();
-      }
-    };
+	const promise = new Promise(resolve => {
+		let resolved = false;
 
-    timerId = setTimeout(() => {
-      _resolve();
-    }, ms);
-  });
+		_resolve = () => {
+			if (!resolved) {
+				resolved = true;
+				resolve();
+			}
+		};
 
-  promise.cancel = () => {
-    clearTimeout(timerId);
-    _resolve();
-  };
+		timerId = setTimeout(() => {
+			_resolve();
+		}, ms);
+	});
 
-  return promise;
+	promise.cancel = () => {
+		clearTimeout(timerId);
+		_resolve();
+	};
+
+	return promise;
 }
 
-async function run (text, opt = {}) {
-  if (!text || text.length === 0) {
-    return;
-  }
+async function run(text, opt = {}) {
+	if (!text || text.length === 0) {
+		return;
+	}
 
-  const {
-    duration,
-    delay,
-    interruptable
-  } = opt;
+	const {
+		duration,
+		delay,
+		interruptable
+	} = opt;
 
-  const ctx = {
-    stream: opt.stream || process.stdout,
-    delay: delay || Math.ceil((duration || 700) / text.length),
-    running: true,
-    sleepPromise: null,
-    cleanupCb: () => {}
-  };
+	const ctx = {
+		stream: opt.stream || process.stdout,
+		delay: delay || Math.ceil((duration || 700) / text.length),
+		running: true,
+		sleepPromise: null,
+		tasks: [],
+		cleanupCb: () => {}
+	};
 
-  if (!!interruptable) {
-    const interrupt = () => {
-      if (ctx.sleepPromise && ctx.sleepPromise.cancel) {
-        ctx.sleepPromise.cancel();
-      }
-      ctx.running = false;
-    }
+	if (interruptable) {
+		const interrupt = () => {
+			if (ctx.sleepPromise && ctx.sleepPromise.cancel) {
+				ctx.sleepPromise.cancel();
+			}
+			ctx.running = false;
+		};
 
-    const stdinLastPausingState = process.stdin.isPaused()
-                            || (!process.stdin._readableState.flowing);
+		const stdinLastPausingState = process.stdin.isPaused() ||
+			(!process.stdin._readableState.flowing);
 
-    process.stdin.once('data', interrupt);
+		process.stdin.once('data', interrupt);
 
-    ctx.cleanupCb = () => {
-      process.stdin.removeListener('data', interrupt);
-      
-      if (stdinLastPausingState) {
-        process.stdin.pause();
-      }
-    };
-  }
+		ctx.cleanupCb = () => {
+			process.stdin.removeListener('data', interrupt);
 
-  // Prevent breaking the lines when animating.
-  process.stdin.setRawMode(true);
+			if (stdinLastPausingState) {
+				process.stdin.pause();
+			}
+		};
+	}
 
-  for (let i in text) {
-    if (!ctx.running) {
-      ctx.stream.write(text.substr(i));
-      break;
-    }
+	// Prevent breaking the lines when animating.
+	process.stdin.setRawMode(true);
 
-    ctx.stream.write(text[i]);
-    await sleep(ctx.delay);
-  }
+	for (const i in text) {
+		if (Object.prototype.hasOwnProperty.call(text, i)) {
+			const ch = text[i];
 
-  process.stdin.setRawMode(false);
-  ctx.cleanupCb();
+			ctx.tasks.push(async () => {
+				ctx.stream.write(ch);
+				if (ctx.running) {
+					await sleep(ctx.delay);
+				}
+			});
+		}
+	}
+
+	await ctx.tasks.reduce((promise, task) => {
+		return promise.then(() => {
+			return task();
+		});
+	}, deferred());
+
+	process.stdin.setRawMode(false);
+	ctx.cleanupCb();
 }
 
 module.exports = (text, opt) => {
-  return run(text, opt);
+	return run(text, opt);
 };
